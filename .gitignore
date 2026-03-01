@@ -1,0 +1,12 @@
+# Compiled binary (rebuild with install.sh)
+umlaut-helper
+!umlaut-helper.swift
+
+# macOS
+.DS_Store
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+build/
+DerivedData/
