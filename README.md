@@ -14,15 +14,15 @@ Default mappings:
 | Caps Lock + Shift + O | Ö |
 | Caps Lock + Shift + U | Ü |
 
-## Status
+## Why
 
-This is a single-purpose utility rather than a general remapping framework. The repository contains the Swift event-tap implementation plus install/uninstall scripts; there is no automated test suite or Continuous Integration (CI) configuration.
+Karabiner-Elements was too slow for push-to-talk dictation on the author's machine: roughly 400 ms of perceived delay, versus roughly 1-5 ms with this helper. These are informal observations, not benchmarks, and will vary by Mac, keyboard and Karabiner version.
 
-The original motivation for the project was an observed push-to-talk latency problem with Karabiner-Elements. The initial repository notes reported roughly **~400 ms** of perceived delay with that setup versus **~1–5 ms** with this helper. Those figures are preserved as motivating observations, not as independently benchmarked guarantees for every Mac, keyboard, or Karabiner version.
+This is a single-purpose utility, not a general remapping framework. It has no automated tests or CI.
 
 ## How it works
 
-1. `install.sh` uses `/usr/bin/hidutil` to replace the current `UserKeyMapping` with a Caps Lock → F18 mapping.
+1. `install.sh` uses `/usr/bin/hidutil` to replace the current `UserKeyMapping` with a Caps Lock -> F18 mapping.
 2. `umlaut-helper.swift` compiles to a small binary that installs a Core Graphics event tap (`CGEventTap`).
 3. The event tap suppresses F18 and, while it is held, converts A/O/U/S key-down events into Unicode ä/ö/ü/ß characters.
 4. Two LaunchAgents are written under `~/Library/LaunchAgents`: one reapplies the `hidutil` mapping at login and one keeps the compiled helper running.
@@ -33,7 +33,7 @@ Option, Control, Command, and other modifiers are otherwise passed through by th
 
 ### Existing `hidutil` mappings are overwritten
 
-The installer does **not** merge with an existing `UserKeyMapping`. It sets the entire value to the single Caps Lock → F18 mapping:
+The installer does **not** merge with an existing `UserKeyMapping`. It sets the entire value to the single Caps Lock -> F18 mapping:
 
 ```text
 Caps Lock -> F18
@@ -57,7 +57,7 @@ If you want to relocate the checkout, uninstall first, move it, and then run `./
 
 Requirements:
 
-- macOS 12 Monterey or later, as originally targeted by this repository
+- macOS 12 Monterey or later
 - Xcode Command Line Tools (`xcode-select --install`)
 - Accessibility permission for the compiled helper
 
@@ -71,7 +71,7 @@ cd umlaut-helper
 
 Then grant Accessibility permission:
 
-1. Open **System Settings → Privacy & Security → Accessibility**.
+1. Open **System Settings -> Privacy & Security -> Accessibility**.
 2. Click **+** and select the compiled `umlaut-helper` binary. The installer prints its absolute path.
 3. Enable it.
 
@@ -92,12 +92,9 @@ Again, if you had unrelated `hidutil` mappings before installing this project, t
 | Path | Purpose |
 | --- | --- |
 | `umlaut-helper.swift` | Event-tap implementation and character map |
-| `install.sh` | Compiles the binary, installs the Caps Lock → F18 mapping, and writes/loads both LaunchAgents |
+| `install.sh` | Compiles the binary, installs the Caps Lock to F18 mapping, and writes/loads both LaunchAgents |
 | `uninstall.sh` | Unloads/removes the LaunchAgents and clears `UserKeyMapping` |
-| `.gitignore` | Excludes the locally compiled `umlaut-helper` binary and local/editor artifacts |
 | `LICENSE` | MIT license |
-
-The repository is intentionally flat: these are a handful of directly related entrypoints, and moving the Swift source would require updating the explicit path used by `install.sh` without providing a meaningful navigation benefit.
 
 ## Customizing the character map
 
@@ -115,7 +112,7 @@ let umlautMap: [Int64: (String, String)] = [
 ]
 ```
 
-Common macOS virtual key codes used by the original guide:
+Common macOS virtual key codes:
 
 | Key | Code | Key | Code | Key | Code |
 | --- | ---: | --- | ---: | --- | ---: |
@@ -138,7 +135,7 @@ After changing the Swift source, rerun `./install.sh` so the installed binary is
 
 The Caps Lock source usage and F18 destination are embedded in `install.sh` in two places: the immediate `hidutil` command and the generated LaunchAgent. If you change the mapping, keep those two copies synchronized.
 
-The original guide used these USB Human Interface Device (HID) usage codes:
+USB Human Interface Device (HID) usage codes for common source keys:
 
 | Key | HID usage code |
 | --- | --- |
@@ -150,31 +147,24 @@ The original guide used these USB Human Interface Device (HID) usage codes:
 
 F18 is `0x70000006D` and its macOS virtual key code in the Swift source is `79`. If you choose a different destination, update `kF18KeyCode` as well.
 
-The original F-key virtual-code reference was: F13=105, F14=107, F15=113, F16=106, F17=64, F18=79, F19=80, F20=90.
+F-key virtual codes: F13=105, F14=107, F15=113, F16=106, F17=64, F18=79, F19=80, F20=90.
 
 ## More complex remaps
 
-There is no `handleEvent` function in the current source. Event handling lives directly in the `callback` closure assigned to `CGEventTapCallBack`.
-
-For multi-character sequences, dead-key behavior, or additional layers, extend that callback and keep any state beside the existing `capsHeld` / `usedAsModifier` state. For example, a compose-like layer could store the first key while the remapped modifier is held and consume the next key before calling `postUnicodeString`.
-
-If you add another remapped modifier layer, use a distinct destination key and track that key's held state separately. Keep the corresponding `hidutil` mappings, virtual key codes, and event-tap logic in sync.
+Event handling lives in the `callback` closure assigned to `CGEventTapCallBack`. For multi-character sequences, dead-key behavior or extra layers, extend that callback and keep any state beside the existing `capsHeld` / `usedAsModifier` state. If you add another remapped modifier layer, use a distinct destination key, track its held state separately, and keep the `hidutil` mappings, virtual key codes and event-tap logic in sync.
 
 ## Comparison with a full remapping tool
 
-This project deliberately makes a narrower tradeoff than Karabiner-Elements:
-
 | | Karabiner-Elements | umlaut-helper |
 | --- | --- | --- |
-| Intended scope | General-purpose keyboard remapping | One small custom layer |
-| Event architecture | Virtual keyboard/remapping stack | `hidutil` + Core Graphics event tap |
-| Keys handled | Broad remapping rules | Only the configured event-tap behavior |
-| Persistence | Managed by Karabiner's services/configuration | Reapplied by LaunchAgents |
+| Scope | General-purpose keyboard remapping | One small custom layer |
+| Mechanism | Virtual keyboard/remapping stack | `hidutil` + Core Graphics event tap |
+| Persistence | Managed by Karabiner's services | Reapplied by LaunchAgents |
 | Flexibility | High | Requires editing Swift/shell code |
-| Reported motivation in this repo | Perceived ~400 ms push-to-talk delay in the original setup | Reported ~1–5 ms in the original setup |
+| Observed push-to-talk delay | about 400 ms | about 1-5 ms |
 
-The latency row records the project's original observations; it should not be read as a current general benchmark of Karabiner-Elements.
+The latency row records informal observations from the author's setup, not a general benchmark of Karabiner-Elements.
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).
