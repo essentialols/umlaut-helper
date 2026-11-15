@@ -12,7 +12,6 @@ let kF18KeyCode: Int64 = 79
 
 // State
 var capsHeld = false
-var usedAsModifier = false
 var activeTap: CFMachPort?
 
 // Umlaut mappings: keyCode -> (lowercase, uppercase)
@@ -49,7 +48,6 @@ let callback: CGEventTapCallBack = { proxy, type, event, refcon in
     if keyCode == kF18KeyCode {
         if type == .keyDown {
             capsHeld = true
-            usedAsModifier = false
         } else if type == .keyUp {
             capsHeld = false
         }
@@ -59,7 +57,6 @@ let callback: CGEventTapCallBack = { proxy, type, event, refcon in
     // While "Caps Lock" is held, check for umlaut keys
     if type == .keyDown && capsHeld {
         if let (lower, upper) = umlautMap[keyCode] {
-            usedAsModifier = true
             let shiftHeld = event.flags.contains(.maskShift)
             postUnicodeString(shiftHeld ? upper : lower)
             return nil // suppress original key event
